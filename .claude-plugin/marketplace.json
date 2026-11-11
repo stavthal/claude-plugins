@@ -1,0 +1,17 @@
+{
+  "name": "stavthal",
+  "metadata": {
+    "description": "Claude Code plugins and skills by Stavros Thalassinos."
+  },
+  "owner": {
+    "name": "Stavros Thalassinos",
+    "url": "https://github.com/stavthal"
+  },
+  "plugins": [
+    {
+      "name": "relay",
+      "source": "./plugins/relay",
+      "description": "Sonnet leads, Haiku scouts read in parallel, Opus advises. A hook counts repeated errors and calls for the advisor on the second one."
+    }
+  ]
+}

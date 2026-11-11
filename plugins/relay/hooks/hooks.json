@@ -1,0 +1,25 @@
+{
+  "description": "Counts repeated tool errors and calls for the advisor on the second one",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/repeat_error.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/repeat_error.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

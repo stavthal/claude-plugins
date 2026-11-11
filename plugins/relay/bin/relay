@@ -1,0 +1,13 @@
+#!/bin/sh
+# Start a Sonnet lead with the relay plugin: Haiku scouts, Opus advisor, repeat error hook.
+# Run it from any repo. Extra arguments go straight to claude.
+# For a checkout that is not installed as a plugin. Installed users type /relay:lead instead.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# The lead rules are the skill body, without its frontmatter block.
+LEAD_RULES="$(sed '1,/^---$/d' "$ROOT/skills/lead/SKILL.md")"
+exec claude \
+  --plugin-dir "$ROOT" \
+  --model sonnet \
+  --effort high \
+  --append-system-prompt "$LEAD_RULES" \
+  "$@"

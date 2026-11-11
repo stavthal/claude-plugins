@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay flow</title>
+<style>
+  :root {
+    --bg: #0c0e13; --panel: #11141b; --line: #2a2f3a; --text: #c9d1e0; --dim: #6b7385;
+    --lead: #e8915a; --scout: #7aa2f7; --advisor: #a78bfa; --code: #7fd88f;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: #05060a; }
+  body { display: grid; place-items: center; overflow: hidden;
+    font: 13px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text); }
+  #stage { position: relative; width: 824px; height: 960px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; transform-origin: center; }
+  #stage > * { position: absolute; }
+
+  .chrome { top: 0; left: 0; right: 0; height: 34px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 11px; }
+  .chrome i { position: absolute; top: 12px; width: 10px; height: 10px; border-radius: 50%; }
+  .chrome i:nth-child(1) { left: 14px; background: #ff5f57; }
+  .chrome i:nth-child(2) { left: 30px; background: #febc2e; }
+  .chrome i:nth-child(3) { left: 46px; background: #28c840; }
+
+  .title { top: 50px; left: 0; right: 0; text-align: center; letter-spacing: .12em; font-weight: 700; }
+  .legend { top: 82px; left: 0; right: 0; display: flex; justify-content: center; gap: 28px; color: var(--dim); }
+  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 7px; background: currentColor; }
+  .lead { color: var(--lead); } .scout { color: var(--scout); }
+  .advisor { color: var(--advisor); } .code { color: var(--code); }
+  .dim { color: var(--dim); }
+
+  .box { border: 1px solid currentColor; background: var(--panel); border-radius: 3px;
+    padding: 10px 12px; text-align: center; transition: box-shadow .3s, background .3s; }
+  .box b { display: block; }
+  .box .sub { color: var(--text); }
+  .box.on { box-shadow: 0 0 0 1px currentColor, 0 0 22px -4px currentColor; background: #161a23; }
+
+  #advisor { left: 24px; top: 116px; width: 190px; height: 600px; text-align: left; padding: 0; }
+  #advisor b { text-align: center; padding: 10px 0 0; }
+  #advisor .sub { text-align: center; color: var(--advisor); opacity: .8; }
+  #advisor p { position: absolute; left: 14px; right: 12px; margin: 0; color: var(--dim); }
+  .trigger { position: absolute; left: 0; right: 0; height: 24px; padding: 2px 14px; color: var(--dim);
+    transition: background .3s, color .3s; }
+  .trigger::before { content: "◇ "; }
+  .trigger.on { background: rgba(167, 139, 250, .2); color: #fff; }
+  .trigger.on::before { content: "◆ "; }
+  .stat { position: absolute; left: 14px; right: 14px; display: flex; justify-content: space-between; color: var(--dim); }
+  .stat em { font-style: normal; color: var(--scout); font-weight: 700; }
+
+  #lead { left: 400px; top: 116px; width: 250px; height: 96px; }
+  #hook { left: 330px; top: 262px; width: 390px; height: 128px; text-align: left; }
+  #hook .head { display: flex; justify-content: space-between; font-weight: 700; }
+  #hook .row { display: grid; grid-template-columns: 130px 1fr 78px; gap: 10px; align-items: center; color: var(--text); }
+  #hook .row span:last-child { text-align: right; font-weight: 700; }
+  .bar { height: 12px; background: #1c212c; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: currentColor; transition: width .5s ease; }
+  #delegate { top: 404px; left: 330px; width: 390px; text-align: center; background: var(--bg); }
+
+  .scoutbox { top: 470px; width: 160px; height: 120px; }
+  #s1 { left: 250px; } #s2 { left: 445px; } #s3 { left: 640px; }
+  .scoutbox .bar { margin: 6px 0 4px; }
+  .scoutbox .state { color: var(--dim); }
+  .scoutbox .state.done { color: var(--code); }
+
+  #back { left: 400px; top: 650px; width: 250px; height: 64px; }
+
+  #log { left: 24px; top: 748px; width: 776px; height: 132px; border: 1px solid var(--line);
+    border-radius: 3px; padding: 14px 14px 8px; }
+  #log::before { content: "session log"; position: absolute; top: -10px; left: 16px; padding: 0 8px;
+    background: var(--bg); color: var(--dim); }
+  #log div { display: grid; grid-template-columns: 76px 96px 1fr; white-space: nowrap; animation: rise .25s ease-out; }
+  #log div span:first-child { color: var(--dim); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+  #prompt { left: 24px; top: 894px; color: var(--text); }
+  #prompt b { color: var(--code); }
+  #status { left: 24px; top: 920px; right: 24px; display: flex; gap: 26px; color: var(--dim); }
+  #status span b { color: var(--text); }
+  #status .note { margin-left: auto; }
+
+  svg { left: 0; top: 0; pointer-events: none; }
+  svg path { fill: none; stroke: #3a4150; stroke-width: 1; }
+  svg path.dash { stroke-dasharray: 3 4; }
+  svg circle { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="chrome"><i></i><i></i><i></i>~/app · zsh · relay</div>
+  <div class="title">RELAY <span class="dim">·</span> <span class="lead">SONNET LEADS</span>
+    <span class="dim">·</span> <span class="scout">HAIKU SCOUTS</span>
+    <span class="dim">·</span> <span class="advisor">OPUS ADVISES</span></div>
+  <div class="legend">
+    <span class="lead">sonnet · lead</span><span class="scout">haiku · scouts</span>
+    <span class="code">hook · plain code</span><span class="advisor">opus · advisor</span>
+  </div>
+
+  <svg width="824" height="960" aria-hidden="true">
+    <path id="w-plan" class="dash" d="M214 200 H400"/>
+    <path id="w-lead-hook" d="M525 212 V262"/>
+    <path id="w-hook-s1" d="M525 390 V440 H330 V470"/>
+    <path id="w-hook-s2" d="M525 390 V470"/>
+    <path id="w-hook-s3" d="M525 390 V440 H720 V470"/>
+    <path id="w-s1-back" d="M330 590 V620 H525 V650"/>
+    <path id="w-s2-back" d="M525 590 V650"/>
+    <path id="w-s3-back" d="M720 590 V620 H525 V650"/>
+    <path id="w-hook-adv" class="dash" d="M330 320 H214"/>
+    <path id="w-adv-lead" class="dash" d="M214 334 H290 V176 H400"/>
+    <path id="w-done" class="dash" d="M214 682 H400"/>
+    <circle id="dot" r="4"/>
+  </svg>
+
+  <div id="advisor" class="box advisor">
+    <b>OPUS</b><div class="sub">advisor · on call</div>
+    <div class="trigger" id="t-plan" style="top:72px">before a plan</div>
+    <p style="top:108px">reads the files the lead names, answers with a verdict and one next step</p>
+    <div class="stat" style="top:236px">calls <em id="calls">0</em></div>
+    <div class="trigger" id="t-error" style="top:198px">same error x2</div>
+    <p style="top:272px">silent on every routine turn</p>
+    <p style="top:330px">tools: Read, Grep, Glob. It cannot edit or run anything. Sonnet applies the advice.</p>
+    <div class="trigger" id="t-done" style="top:554px">before done</div>
+  </div>
+
+  <div id="lead" class="box lead">
+    <b>Sonnet · main session</b><div class="sub">edits + runs tests</div>
+    <div class="dim">effort <span class="lead">▮▮▮▮</span> high</div>
+    <div class="dim">--model sonnet</div>
+  </div>
+
+  <div id="hook" class="box code">
+    <div class="head"><span>repeat_error.py · hook</span><span class="dim">tool calls <span id="calls-seen" class="code">0</span></span></div>
+    <div class="row"><span>failed calls</span><div class="bar lead"><i id="b-fail"></i></div><span id="n-fail" class="lead">0</span></div>
+    <div class="row"><span>same error</span><div class="bar code"><i id="b-same"></i></div><span id="n-same" class="code">x0</span></div>
+    <div class="dim" style="margin-top:6px">x1 <span class="code">→ stays silent</span> &nbsp; x2 <span class="advisor">→ call the advisor</span></div>
+    <div class="dim">no model decides this, the count does</div>
+  </div>
+
+  <div id="delegate" class="dim">delegate reading to scouts · <span class="scout">haiku</span></div>
+
+  <div id="s1" class="box scout scoutbox"><b>scout-search</b><div class="dim">Haiku</div>
+    <div class="bar"><i></i></div><div class="sub">maps the repo</div><div class="state">idle</div></div>
+  <div id="s2" class="box scout scoutbox"><b>scout-grep</b><div class="dim">Haiku</div>
+    <div class="bar"><i></i></div><div class="sub">finds call sites</div><div class="state">idle</div></div>
+  <div id="s3" class="box scout scoutbox"><b>scout-audit</b><div class="dim">Haiku</div>
+    <div class="bar"><i></i></div><div class="sub">diff + tests</div><div class="state">idle</div></div>
+
+  <div id="back" class="box lead"><b>back to Sonnet · lead</b><div class="sub">review + verify</div></div>
+
+  <div id="log"></div>
+  <div id="prompt">~/app <b>$</b> relay</div>
+  <div id="status">
+    <span>scouts <b id="st-scouts">[0/3]</b></span>
+    <span>advisor <b id="st-adv">[idle]</b></span>
+    <span>hook <b id="st-hook">[watching]</b></span>
+    <span class="note">demo loop, not live data</span>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const COLORS = { lead: "#e8915a", scout: "#7aa2f7", advisor: "#a78bfa", code: "#7fd88f" };
+const SCOUTS = ["s1", "s2", "s3"];
+
+function fit() {
+  const scale = Math.min(innerWidth / 844, innerHeight / 980, 1.4);
+  $("stage").style.transform = `scale(${scale})`;
+}
+addEventListener("resize", fit);
+fit();
+
+/** Move the dot along a wire. Resolves when it arrives. */
+function send(wireId, who, ms = 700) {
+  if (still) return Promise.resolve();
+  const wire = $(wireId), dot = $("dot"), length = wire.getTotalLength();
+  dot.setAttribute("fill", COLORS[who]);
+  dot.style.opacity = 1;
+  return new Promise((done) => {
+    const start = performance.now();
+    (function step(now) {
+      const t = Math.min((now - start) / ms, 1);
+      const point = wire.getPointAtLength(length * t);
+      dot.setAttribute("cx", point.x);
+      dot.setAttribute("cy", point.y);
+      if (t < 1) return requestAnimationFrame(step);
+      dot.style.opacity = 0;
+      done();
+    })(start);
+  });
+}
+
+function log(who, text) {
+  const row = document.createElement("div");
+  const time = new Date().toTimeString().slice(0, 8);
+  row.innerHTML = `<span>${time}</span><b class="${who === "hook" ? "code" : who}">${who}</b><span>${text}</span>`;
+  $("log").append(row);
+  while ($("log").children.length > 5) $("log").firstChild.remove();
+}
+
+const light = (id, on = true) => $(id).classList.toggle("on", on);
+
+function setScout(id, percent, state) {
+  const box = $(id);
+  box.querySelector(".bar i").style.width = percent + "%";
+  const label = box.querySelector(".state");
+  label.textContent = state;
+  label.classList.toggle("done", state === "✓ done");
+  light(id, state === "◐ running");
+}
+
+function setHook(seen, failed, same) {
+  $("calls-seen").textContent = seen;
+  $("n-fail").textContent = failed;
+  $("b-fail").style.width = Math.min(failed * 25, 100) + "%";
+  $("n-same").textContent = "x" + same;
+  $("b-same").style.width = same * 50 + "%";
+}
+
+async function askAdvisor(triggerId, returnWire, reason, verdict) {
+  light(triggerId); light("advisor");
+  $("st-adv").textContent = "[advising]";
+  $("calls").textContent = Number($("calls").textContent) + 1;
+  log("advisor", reason);
+  await sleep(1100);
+  await send(returnWire, "advisor", 800);
+  log("advisor", verdict);
+  light(triggerId, false); light("advisor", false);
+  $("st-adv").textContent = "[idle]";
+}
+
+function reset() {
+  SCOUTS.forEach((id) => setScout(id, 0, "idle"));
+  setHook(0, 0, 0);
+  $("calls").textContent = 0;
+  $("st-scouts").textContent = "[0/3]";
+  $("st-hook").textContent = "[watching]";
+  ["lead", "hook", "back", "advisor", "t-plan", "t-error", "t-done"].forEach((id) => light(id, false));
+}
+
+async function loop() {
+  reset();
+  light("lead");
+  log("lead", "task: rename getUser to loadUser");
+  await sleep(900);
+
+  // 1. Scouts read in parallel while the lead waits.
+  await send("w-lead-hook", "lead", 400);
+  ["s1", "s2"].forEach((id) => setScout(id, 8, "◐ running"));
+  await send("w-hook-s1", "scout");
+  await send("w-hook-s2", "scout", 500);
+  log("lead", "2 scouts launched in one message");
+  for (const [percent, seen] of [[35, 6], [70, 13], [100, 19]]) {
+    setScout("s1", percent * 0.9, "◐ running");
+    setScout("s2", percent, percent === 100 ? "✓ done" : "◐ running");
+    setHook(seen, 0, 0);
+    await sleep(700);
+  }
+  log("scout-grep", "MATCHES: 14");
+  $("st-scouts").textContent = "[1/3]";
+  setScout("s1", 100, "✓ done");
+  log("scout-search", "ENTRY: src/users/service.ts:42");
+  $("st-scouts").textContent = "[2/3]";
+  await send("w-s2-back", "scout", 500);
+
+  // 2. The lead has a plan. The advisor checks it once.
+  await askAdvisor("t-plan", "w-plan", "before a plan · reading 3 files", "VERDICT: go");
+
+  // 3. The lead edits. The test fails twice with the same error.
+  light("hook");
+  setHook(24, 1, 1);
+  log("hook", "Bash failed · same error x1 → silent");
+  await sleep(1300);
+  setHook(27, 2, 2);
+  $("st-hook").textContent = "[fired]";
+  log("hook", "Bash failed · same error x2 → call the advisor");
+  await send("w-hook-adv", "code", 600);
+  await askAdvisor("t-error", "w-adv-lead", "same error x2 · finding the root cause",
+    "VERDICT: change · stale mock in users.test.ts:18");
+  light("hook", false);
+  $("st-hook").textContent = "[watching]";
+
+  // 4. The audit scout checks the fix, then the lead verifies and closes.
+  await send("w-hook-s3", "scout");
+  setScout("s3", 60, "◐ running");
+  await sleep(900);
+  setScout("s3", 100, "✓ done");
+  $("st-scouts").textContent = "[3/3]";
+  log("scout-audit", "TESTS: pass");
+  await send("w-s3-back", "scout");
+  light("lead", false); light("back");
+  await askAdvisor("t-done", "w-done", "before done · reading the diff", "VERDICT: go");
+  log("lead", "review + verify done");
+  await sleep(still ? 0 : 3200);
+}
+
+(async () => { do { await loop(); } while (!still); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "relay",
+  "version": "0.1.0",
+  "description": "Sonnet leads, Haiku scouts read in parallel, Opus advises. A hook counts repeated errors and calls for the advisor on the second one.",
+  "author": {
+    "name": "Stavros Thalassinos",
+    "url": "https://github.com/stavthal"
+  },
+  "homepage": "https://github.com/stavthal/claude-plugins",
+  "repository": "https://github.com/stavthal/claude-plugins",
+  "license": "MIT",
+  "keywords": ["claude-code", "claude-code-plugin", "subagents", "agents", "hooks"]
+}
